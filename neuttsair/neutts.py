@@ -7,8 +7,13 @@ import re
 import perth
 from neucodec import NeuCodec, DistillNeuCodec
 from phonemizer.backend import EspeakBackend
+from phonemizer.backend.espeak.wrapper import EspeakWrapper
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 from threading import Thread
+
+# macOS espeak configuration
+_ESPEAK_LIBRARY = '/opt/homebrew/Cellar/espeak/1.48.04_1/lib/libespeak.1.1.48.dylib'
+EspeakWrapper.set_library(_ESPEAK_LIBRARY)
 
 
 def _linear_overlap_add(frames: list[np.ndarray], stride: int) -> np.ndarray:
