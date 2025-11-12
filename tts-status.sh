@@ -57,7 +57,7 @@ if pgrep -f "tts_service.py\|tts_hotkey.py" > /dev/null; then
     echo ""
     echo "Control:"
     echo "  • Stop:    ./tts-stop.sh"
-    echo "  • Hotkeys: Cmd+Shift+S (speak), Cmd+Shift+Q (quit)"
+    echo "  • Hotkeys: Control+Right Arrow (speak), Control+Left Arrow (replay), Cmd+Shift+Q (quit)"
 else
     echo ""
     echo "To start service: ./tts-start.sh"

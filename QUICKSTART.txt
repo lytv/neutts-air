@@ -17,8 +17,9 @@
   START:   tts-start
   
   USE:     1. Copy text (Cmd+C)
-           2. Press Cmd+Shift+S
-           3. Listen! (~2.3s)
+           2. Press Control+Right Arrow (generate & play)
+           3. Press Control+Left Arrow (replay last audio)
+           4. Listen! (~2.3s)
   
   STOP:    Cmd+Shift+Q  (or: tts-stop)
   
@@ -55,13 +56,13 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   ✓ Start service in morning: tts-start
-  ✓ Use all day: Cmd+Shift+S
+  ✓ Use all day: Control+Right Arrow (speak), Control+Left Arrow (replay)
   ✓ Stop when done: Cmd+Shift+Q
   ✓ Works in ANY app (system-wide!)
 
 ╔════════════════════════════════════════════════════════════╗
 ║  Ready? Run: ./setup.sh  (if not done yet)                ║
 ║  Then:       tts-start                                     ║
-║  Try it:     Copy text → Cmd+Shift+S → Listen!            ║
+║  Try it:     Copy text → Control+Right Arrow → Listen!    ║
 ╚════════════════════════════════════════════════════════════╝
 

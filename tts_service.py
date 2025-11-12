@@ -162,6 +162,22 @@ class TTSService:
             logger.error(f"❌ Generation failed: {e}")
             return {"status": "error", "message": str(e)}
     
+    def replay_audio(self):
+        """Replay the last generated audio file"""
+        import os
+        
+        if not os.path.exists(self.output_path):
+            logger.warning("No audio file to replay")
+            return {"status": "error", "message": "No audio file found to replay"}
+        
+        try:
+            logger.info("🔁 Replaying last audio...")
+            self._play_audio_async(self.output_path)
+            return {"status": "success", "message": "Replaying audio"}
+        except Exception as e:
+            logger.error(f"❌ Replay failed: {e}")
+            return {"status": "error", "message": str(e)}
+    
     def switch_voice(self, voice_name):
         """Switch to another voice"""
         if voice_name in self.voices:
@@ -180,6 +196,9 @@ class TTSService:
             if action == 'speak':
                 text = data.get('text', '')
                 return self.generate_speech(text)
+            
+            elif action == 'replay':
+                return self.replay_audio()
             
             elif action == 'switch_voice':
                 voice = data.get('voice', 'dave')

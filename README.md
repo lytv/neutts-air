@@ -14,7 +14,7 @@ State-of-the-art Voice AI has been locked behind web APIs for too long. NeuTTS A
 - 📱 Optimised for on-device deployment - provided in GGML format, ready to run on phones, laptops, or even Raspberry Pis
 - 👫 Instant voice cloning - create your own speaker with as little as 3 seconds of audio
 - 🚄 Simple LM + codec architecture built off a 0.5B backbone - the sweet spot between speed, size, and quality for real-world applications
-- ⚡ **NEW: Hotkey Service** - Copy text, press Cmd+Shift+S, listen in ~2.3s!
+- ⚡ **NEW: Hotkey Service** - Copy text, press Control+Right Arrow, listen in ~2.3s!
 
 ## Model Details
 
@@ -62,8 +62,9 @@ tts-start      # Start service (wait ~10s for model loading)
 
 **Then:**
 1. Copy any text (Cmd+C)
-2. Press **Cmd+Shift+S**
-3. Listen! (~2.3 seconds)
+2. Press **Control+Right Arrow** to generate and play
+3. Press **Control+Left Arrow** to replay last audio
+4. Listen! (~2.3 seconds)
 
 **Stop:**
 - Press **Cmd+Shift+Q** (or run `tts-stop`)
@@ -87,9 +88,11 @@ tts-fast       # Interactive mode (manual)
 ### Architecture
 
 ```
-Copy text (Cmd+C) → Press Cmd+Shift+S → 2.3s → Audio plays!
+Copy text (Cmd+C) → Press Control+Right Arrow → 2.3s → Audio plays!
                          ↓
               Background Service (models loaded)
+                         ↓
+Press Control+Left Arrow → Replay last audio instantly!
 ```
 
 ---
@@ -132,7 +135,7 @@ The setup script handles this automatically. If needed manually, espeak library 
 
 ```bash
 tts-start
-# Copy text anywhere → Press Cmd+Shift+S → Listen!
+# Copy text anywhere → Press Control+Right Arrow → Listen!
 ```
 
 ### Option 2: Interactive Mode
@@ -259,7 +262,7 @@ tail -f /tmp/tts_hotkey.log      # Hotkey logs
 
 ### Hotkey Not Working
 
-**Issue:** Cmd+Shift+S does nothing
+**Issue:** Control+Right Arrow does nothing
 
 **Solution:**
 1. Check macOS permissions: System Settings → Privacy & Security → Accessibility
@@ -345,7 +348,8 @@ brew install espeak
 |--------|----------------|
 | Setup | `./setup.sh` |
 | Start | `tts-start` or `./tts-start.sh` |
-| Use | Copy text, press **Cmd+Shift+S** |
+| Use | Copy text, press **Control+Right Arrow** |
+| Replay | Press **Control+Left Arrow** to replay last audio |
 | Stop | **Cmd+Shift+Q** or `tts-stop` |
 | Status | `tts-status` |
 
@@ -431,7 +435,7 @@ Restart: `tts-stop && tts-start`
 Edit `tts_hotkey.py`:
 ```python
 hotkeys = {
-    '<cmd>+<alt>+t': self.on_speak_hotkey,  # Change from Cmd+Shift+S
+    '<cmd>+<alt>+t': self.on_speak_hotkey,  # Change from default speak hotkey
     '<cmd>+<alt>+q': self.on_quit_hotkey,   # Change from Cmd+Shift+Q
 }
 ```
@@ -471,7 +475,7 @@ tts-start
 # While reading article in browser:
 # 1. Select paragraph
 # 2. Copy (Cmd+C)
-# 3. Press Cmd+Shift+S
+# 3. Press Control+Right Arrow
 # 4. Listen while scrolling!
 ```
 
@@ -479,7 +483,7 @@ tts-start
 
 ```bash
 # Open email
-# Copy message → Cmd+Shift+S
+# Copy message → Control+Right Arrow
 # Listen while doing other tasks
 ```
 
@@ -487,7 +491,7 @@ tts-start
 
 ```bash
 # Copy code comments
-# Cmd+Shift+S
+# Control+Right Arrow
 # Listen while reviewing code
 ```
 
@@ -567,7 +571,7 @@ This setup provides:
 ```bash
 ./setup.sh          # Setup (2-3 minutes)
 tts-start           # Start service (10 seconds)
-# Copy text → Cmd+Shift+S → Listen!
+# Copy text → Control+Right Arrow → Listen!
 ```
 
 **Enjoy your instant TTS! ⚡**

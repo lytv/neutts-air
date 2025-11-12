@@ -3,7 +3,8 @@
 TTS Hotkey Client - Listens for global hotkeys and communicates with TTS service
 
 Hotkeys:
-- Cmd+Shift+S: Read clipboard text
+- Control+Right Arrow: Read clipboard text
+- Control+Left Arrow: Replay last generated audio
 - Cmd+Shift+Q: Stop TTS service and exit
 """
 import sys
@@ -25,6 +26,13 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+SPEAK_HOTKEY_BINDING = '<ctrl>+<right>'
+SPEAK_HOTKEY_DISPLAY = 'Control+Right Arrow'
+REPLAY_HOTKEY_BINDING = '<ctrl>+<left>'
+REPLAY_HOTKEY_DISPLAY = 'Control+Left Arrow'
+QUIT_HOTKEY_BINDING = '<cmd>+<shift>+q'
+QUIT_HOTKEY_DISPLAY = 'Cmd+Shift+Q'
 
 SOCKET_PATH = '/tmp/tts_service.sock'
 
@@ -85,7 +93,7 @@ class TTSHotkeyClient:
             return {"status": "error", "message": str(e)}
     
     def on_speak_hotkey(self):
-        """Handle Cmd+Shift+S - Read clipboard"""
+        """Handle Control+Right Arrow - Read clipboard"""
         logger.info("🎤 Speak hotkey pressed")
         
         try:
@@ -109,7 +117,11 @@ class TTSHotkeyClient:
             
             if response.get('status') == 'success':
                 gen_time = response.get('time', 0)
-                logger.info(f"✅ Success! Generated in {gen_time}s")
+                logger.info(
+                    "✅ Success! Generated in %ss (total %.2fs)",
+                    gen_time,
+                    total_time
+                )
                 self.show_notification("TTS", f"Done! ({gen_time}s)")
             else:
                 error_msg = response.get('message', 'Unknown error')
@@ -118,6 +130,29 @@ class TTSHotkeyClient:
                 
         except Exception as e:
             logger.error(f"Hotkey handler error: {e}")
+            self.show_notification("TTS Error", str(e))
+    
+    def on_replay_hotkey(self):
+        """Handle Control+Left Arrow - Replay last audio"""
+        logger.info("🔁 Replay hotkey pressed")
+        
+        try:
+            # Show notification
+            self.show_notification("TTS", "Replaying...")
+            
+            # Send replay request to service
+            response = self.send_request('replay')
+            
+            if response.get('status') == 'success':
+                logger.info("✅ Replay started")
+                self.show_notification("TTS", "Replaying audio")
+            else:
+                error_msg = response.get('message', 'Unknown error')
+                logger.error(f"❌ Replay error: {error_msg}")
+                self.show_notification("TTS Error", error_msg)
+                
+        except Exception as e:
+            logger.error(f"Replay hotkey handler error: {e}")
             self.show_notification("TTS Error", str(e))
     
     def on_quit_hotkey(self):
@@ -149,8 +184,9 @@ class TTSHotkeyClient:
         logger.info("⌨️  TTS Hotkey Client Starting")
         logger.info("=" * 60)
         logger.info("Hotkeys:")
-        logger.info("  • Cmd+Shift+S: Read clipboard text")
-        logger.info("  • Cmd+Shift+Q: Stop service and exit")
+        logger.info("  • %s: Read clipboard text", SPEAK_HOTKEY_DISPLAY)
+        logger.info("  • %s: Replay last audio", REPLAY_HOTKEY_DISPLAY)
+        logger.info("  • %s: Stop service and exit", QUIT_HOTKEY_DISPLAY)
         logger.info("=" * 60)
         
         # Check if service is running
@@ -164,12 +200,16 @@ class TTSHotkeyClient:
         logger.info("🎧 Listening for hotkeys...\n")
         
         # Show startup notification
-        self.show_notification("TTS Ready", "Cmd+Shift+S to speak, Cmd+Shift+Q to quit")
+        self.show_notification(
+            "TTS Ready",
+            f"{SPEAK_HOTKEY_DISPLAY} to speak, {REPLAY_HOTKEY_DISPLAY} to replay, {QUIT_HOTKEY_DISPLAY} to quit"
+        )
         
         # Setup hotkeys
         hotkeys = {
-            '<cmd>+<shift>+s': self.on_speak_hotkey,
-            '<cmd>+<shift>+q': self.on_quit_hotkey,
+            SPEAK_HOTKEY_BINDING: self.on_speak_hotkey,
+            REPLAY_HOTKEY_BINDING: self.on_replay_hotkey,
+            QUIT_HOTKEY_BINDING: self.on_quit_hotkey,
         }
         
         # Start listening
