@@ -93,6 +93,15 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 echo "📦 Installing from requirements.txt..."
 pip install --quiet --upgrade pip
+
+# Check Python version and install numba beta for Python 3.14+
+PYTHON_MAJOR=$(python3 -c "import sys; print(sys.version_info.major)")
+PYTHON_MINOR=$(python3 -c "import sys; print(sys.version_info.minor)")
+if [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -ge 14 ]; then
+    echo "📦 Installing numba beta (required for Python 3.14+)..."
+    pip install --quiet --pre "numba>=0.63.0b1" || pip install --quiet --pre "numba==0.63.0b1"
+fi
+
 pip install --quiet -r requirements.txt
 echo -e "${GREEN}✅ Core dependencies installed${NC}"
 echo ""
@@ -107,8 +116,13 @@ pip install --quiet llama-cpp-python
 echo -e "${GREEN}✅ llama-cpp-python installed${NC}"
 
 echo "📦 Installing onnxruntime (faster decoding)..."
-pip install --quiet onnxruntime
-echo -e "${GREEN}✅ onnxruntime installed${NC}"
+if pip install --quiet onnxruntime 2>/dev/null; then
+    echo -e "${GREEN}✅ onnxruntime installed${NC}"
+else
+    echo -e "${YELLOW}⚠️  onnxruntime not available for Python $PYTHON_VERSION${NC}"
+    echo "   (This is optional - PyTorch decoder will be used instead)"
+    echo "   For better performance, consider using Python 3.13 or earlier"
+fi
 
 echo "📦 Installing pynput & pyperclip (hotkey support)..."
 pip install --quiet pynput pyperclip

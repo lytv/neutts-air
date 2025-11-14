@@ -15,6 +15,7 @@ import logging
 import time
 from pynput import keyboard
 import pyperclip
+import platform
 
 # Configure logging
 logging.basicConfig(
@@ -264,15 +265,51 @@ class TTSHotkeyClient:
         logger.info("  • %s: Stop service and exit", QUIT_HOTKEY_DISPLAY)
         logger.info("=" * 60)
         
-        # Check if service is running
-        response = self.send_request('ping')
-        if response.get('status') != 'success':
-            logger.error("❌ TTS service is not running!")
-            logger.error("   Please start it first with: ./tts-start.sh")
-            sys.exit(1)
+        # Wait for service to be ready (check socket exists and service responds)
+        logger.info("⏳ Waiting for TTS service to be ready...")
+        import os
+        max_wait = 30  # Wait up to 30 seconds
+        wait_interval = 0.5
+        waited = 0
+        service_ready = False
+        
+        while waited < max_wait:
+            # Check if socket exists
+            if os.path.exists(SOCKET_PATH):
+                # Try simple connection test
+                try:
+                    test_client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    test_client.settimeout(1.0)
+                    test_client.connect(SOCKET_PATH)
+                    test_client.close()
+                    # Socket works, now try ping
+                    response = self.send_request('ping')
+                    if response.get('status') == 'success':
+                        service_ready = True
+                        break
+                except (FileNotFoundError, ConnectionRefusedError, OSError):
+                    pass  # Socket not ready yet
+            time.sleep(wait_interval)
+            waited += wait_interval
+            if int(waited) % 2 == 0 and int(waited) > 0:  # Log every 2 seconds
+                logger.info(f"   Still waiting... ({int(waited)}s)")
+        
+        # Final check
+        if not service_ready:
+            response = self.send_request('ping')
+            if response.get('status') != 'success':
+                logger.error("❌ TTS service is not running!")
+                logger.error("   Please start it first with: ./tts-start.sh")
+                sys.exit(1)
         
         logger.info("✅ Connected to TTS service")
         logger.info("🎧 Listening for hotkeys...\n")
+        
+        # Check macOS permissions
+        if platform.system() == "Darwin":
+            logger.info("💡 macOS Note: If hotkeys don't work, grant Accessibility permission:")
+            logger.info("   System Settings → Privacy & Security → Accessibility")
+            logger.info("   Add Terminal (or your terminal app) to the list\n")
         
         # Initialize service check time
         self.last_service_check = time.time()
