@@ -40,6 +40,10 @@ SOCKET_PATH = '/tmp/tts_service.sock'
 class TTSHotkeyClient:
     def __init__(self):
         self.running = True
+        self.last_service_check = 0
+        self.service_check_interval = 30  # Check service health every 30 seconds
+        self.connection_retries = 3
+        self.retry_delay = 1.0
     
     def show_notification(self, title, message):
         """Show macOS notification"""
@@ -52,49 +56,113 @@ class TTSHotkeyClient:
         except Exception as e:
             logger.warning(f"Failed to show notification: {e}")
     
-    def send_request(self, action, **kwargs):
-        """Send request to TTS service"""
+    def check_service_health(self):
+        """Check if service is still running and accessible"""
         try:
-            # Create request
-            request = {'action': action, **kwargs}
-            request_str = json.dumps(request)
-            
-            # Connect to service
             client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            client.settimeout(30.0)  # 30s timeout for generation
+            client.settimeout(2.0)
             client.connect(SOCKET_PATH)
-            
-            # Send request
-            client.sendall(request_str.encode('utf-8'))
-            client.shutdown(socket.SHUT_WR)
-            
-            # Receive response
-            response_data = b''
-            while True:
-                chunk = client.recv(4096)
-                if not chunk:
-                    break
-                response_data += chunk
-            
             client.close()
-            
-            # Parse response
-            response = json.loads(response_data.decode('utf-8'))
-            return response
-            
-        except FileNotFoundError:
-            logger.error("Service not running!")
-            return {"status": "error", "message": "Service not running"}
-        except socket.timeout:
-            logger.error("Request timeout")
-            return {"status": "error", "message": "Request timeout"}
-        except Exception as e:
-            logger.error(f"Request failed: {e}")
-            return {"status": "error", "message": str(e)}
+            return True
+        except (FileNotFoundError, ConnectionRefusedError, OSError):
+            return False
+    
+    def send_request(self, action, **kwargs):
+        """Send request to TTS service with retry logic"""
+        last_error = None
+        
+        for attempt in range(self.connection_retries):
+            try:
+                # Create request
+                request = {'action': action, **kwargs}
+                request_str = json.dumps(request)
+                
+                # Connect to service
+                client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                client.settimeout(30.0)  # 30s timeout for generation
+                client.connect(SOCKET_PATH)
+                
+                # Send request
+                client.sendall(request_str.encode('utf-8'))
+                client.shutdown(socket.SHUT_WR)
+                
+                # Receive response
+                response_data = b''
+                while True:
+                    chunk = client.recv(4096)
+                    if not chunk:
+                        break
+                    response_data += chunk
+                
+                client.close()
+                
+                # Parse response
+                response = json.loads(response_data.decode('utf-8'))
+                return response
+                
+            except FileNotFoundError:
+                error_msg = "Service socket not found - service may have stopped"
+                last_error = error_msg
+                if attempt < self.connection_retries - 1:
+                    logger.warning(f"Connection attempt {attempt + 1} failed: {error_msg}. Retrying...")
+                    time.sleep(self.retry_delay * (attempt + 1))
+                else:
+                    logger.error(f"❌ {error_msg}")
+                    return {"status": "error", "message": "Service not running - please restart with 'tts-start'"}
+                    
+            except ConnectionRefusedError:
+                error_msg = "Service connection refused - service may have crashed"
+                last_error = error_msg
+                if attempt < self.connection_retries - 1:
+                    logger.warning(f"Connection attempt {attempt + 1} failed: {error_msg}. Retrying...")
+                    time.sleep(self.retry_delay * (attempt + 1))
+                else:
+                    logger.error(f"❌ {error_msg}")
+                    return {"status": "error", "message": "Service connection refused - please restart with 'tts-start'"}
+                    
+            except socket.timeout:
+                error_msg = "Request timeout"
+                last_error = error_msg
+                if attempt < self.connection_retries - 1:
+                    logger.warning(f"Connection attempt {attempt + 1} failed: {error_msg}. Retrying...")
+                    time.sleep(self.retry_delay * (attempt + 1))
+                else:
+                    logger.error(f"❌ {error_msg}")
+                    return {"status": "error", "message": "Request timeout - service may be unresponsive"}
+                    
+            except OSError as e:
+                error_msg = f"Connection error: {e}"
+                last_error = error_msg
+                if attempt < self.connection_retries - 1:
+                    logger.warning(f"Connection attempt {attempt + 1} failed: {error_msg}. Retrying...")
+                    time.sleep(self.retry_delay * (attempt + 1))
+                else:
+                    logger.error(f"❌ {error_msg}")
+                    return {"status": "error", "message": "Connection error - service may have stopped"}
+                    
+            except Exception as e:
+                error_msg = f"Request failed: {e}"
+                last_error = error_msg
+                if attempt < self.connection_retries - 1:
+                    logger.warning(f"Connection attempt {attempt + 1} failed: {error_msg}. Retrying...")
+                    time.sleep(self.retry_delay * (attempt + 1))
+                else:
+                    logger.error(f"❌ {error_msg}")
+                    return {"status": "error", "message": str(e)}
+        
+        # If we get here, all retries failed
+        return {"status": "error", "message": f"Failed after {self.connection_retries} attempts: {last_error}"}
     
     def on_speak_hotkey(self):
         """Handle Control+Right Arrow - Read clipboard"""
         logger.info("🎤 Speak hotkey pressed")
+        
+        # Quick health check before proceeding
+        if not self.check_service_health():
+            error_msg = "Service unavailable - restart with 'tts-start'"
+            logger.error(f"❌ {error_msg}")
+            self.show_notification("TTS Error", error_msg)
+            return
         
         try:
             # Get clipboard text
@@ -135,6 +203,13 @@ class TTSHotkeyClient:
     def on_replay_hotkey(self):
         """Handle Control+Left Arrow - Replay last audio"""
         logger.info("🔁 Replay hotkey pressed")
+        
+        # Quick health check before proceeding
+        if not self.check_service_health():
+            error_msg = "Service unavailable - restart with 'tts-start'"
+            logger.error(f"❌ {error_msg}")
+            self.show_notification("TTS Error", error_msg)
+            return
         
         try:
             # Show notification
@@ -199,6 +274,9 @@ class TTSHotkeyClient:
         logger.info("✅ Connected to TTS service")
         logger.info("🎧 Listening for hotkeys...\n")
         
+        # Initialize service check time
+        self.last_service_check = time.time()
+        
         # Show startup notification
         self.show_notification(
             "TTS Ready",
@@ -216,6 +294,16 @@ class TTSHotkeyClient:
         try:
             with keyboard.GlobalHotKeys(hotkeys) as listener:
                 while self.running:
+                    # Periodic health check to detect service disconnection
+                    current_time = time.time()
+                    if current_time - self.last_service_check > self.service_check_interval:
+                        if not self.check_service_health():
+                            logger.warning("⚠️  Service health check failed - service may have stopped")
+                            self.show_notification(
+                                "TTS Warning",
+                                "Service disconnected. Restart with 'tts-start'"
+                            )
+                        self.last_service_check = current_time
                     time.sleep(0.1)
                 listener.stop()
         except Exception as e:

@@ -14,7 +14,9 @@ State-of-the-art Voice AI has been locked behind web APIs for too long. NeuTTS A
 - 📱 Optimised for on-device deployment - provided in GGML format, ready to run on phones, laptops, or even Raspberry Pis
 - 👫 Instant voice cloning - create your own speaker with as little as 3 seconds of audio
 - 🚄 Simple LM + codec architecture built off a 0.5B backbone - the sweet spot between speed, size, and quality for real-world applications
-- ⚡ **NEW: Hotkey Service** - Copy text, press Control+Right Arrow, listen in ~2.3s!
+- ⚡ **Hotkey Service** - Copy text, press Control+Right Arrow, listen in ~2.3s!
+- 🔁 **Replay Feature** - Press Control+Left Arrow to instantly replay last audio
+- 🔄 **Auto-Reconnect** - Automatic retry and health monitoring for reliable long-running sessions
 
 ## Model Details
 
@@ -73,8 +75,16 @@ tts-start      # Start service (wait ~10s for model loading)
 
 - **First start:** ~7-10s (load models once)
 - **Each use:** ~2.3s (clipboard → audio playing)
+- **Replay:** Instant (no regeneration needed)
 - **Memory:** ~2GB RAM while running
 - **Stop:** <1s (frees RAM)
+
+### Reliability Features
+
+- **Automatic Reconnection:** Retries up to 3 times if service is temporarily unavailable
+- **Health Monitoring:** Periodic checks every 30 seconds to detect service disconnection
+- **Smart Error Handling:** Clear notifications when service needs restart
+- **Connection Resilience:** Handles network issues and service crashes gracefully
 
 ### Aliases
 
@@ -93,6 +103,8 @@ Copy text (Cmd+C) → Press Control+Right Arrow → 2.3s → Audio plays!
               Background Service (models loaded)
                          ↓
 Press Control+Left Arrow → Replay last audio instantly!
+                         ↓
+    Automatic Health Checks & Reconnection (every 30s)
 ```
 
 ---
@@ -268,6 +280,17 @@ tail -f /tmp/tts_hotkey.log      # Hotkey logs
 1. Check macOS permissions: System Settings → Privacy & Security → Accessibility
 2. Enable Terminal/Python
 3. Restart service: `tts-stop && tts-start`
+4. Check if you get error notifications - the client will notify you if service is unavailable
+
+### Service Disconnection
+
+**Issue:** Shortcuts stop working after long inactivity
+
+**Solution:**
+- The client now automatically detects service disconnection
+- You'll receive a notification if service is unavailable
+- Simply restart: `tts-start`
+- The client automatically retries connections (up to 3 times) before showing error
 
 ### Service Won't Start
 
@@ -352,6 +375,12 @@ brew install espeak
 | Replay | Press **Control+Left Arrow** to replay last audio |
 | Stop | **Cmd+Shift+Q** or `tts-stop` |
 | Status | `tts-status` |
+
+**New Features:**
+- ✅ Replay last audio instantly with Control+Left Arrow
+- ✅ Automatic connection retry (up to 3 attempts)
+- ✅ Health monitoring (checks every 30 seconds)
+- ✅ Smart error notifications when service needs restart
 
 ### Performance
 
@@ -561,10 +590,13 @@ This setup provides:
 
 ✅ **Instant TTS** - Background service with hotkeys  
 ✅ **2.3s performance** - Optimized for M1/M2/M3  
+✅ **Instant Replay** - Control+Left Arrow to replay without regeneration  
+✅ **Auto-Reconnect** - Smart retry and health monitoring  
 ✅ **Easy setup** - One command: `./setup.sh`  
 ✅ **System-wide** - Works in any app  
 ✅ **Offline & Free** - No API costs, no internet needed  
 ✅ **Private** - All processing on-device  
+✅ **Reliable** - Handles long-running sessions and service disconnections gracefully  
 
 ### Get Started Now
 
@@ -581,8 +613,18 @@ tts-start           # Start service (10 seconds)
 ## 🆘 Support
 
 - Check status: `tts-status`
-- View logs: `tail -f /tmp/tts_service.log`
+- View logs: `tail -f /tmp/tts_service.log` (service) or `tail -f /tmp/tts_hotkey.log` (hotkey client)
 - Restart: `tts-stop && tts-start`
+- **Error notifications:** The hotkey client will notify you if service becomes unavailable
 - Issues: See Troubleshooting section above
+
+### Recent Updates
+
+**v2.0 Features:**
+- 🔁 Added replay shortcut (Control+Left Arrow) for instant audio replay
+- 🔄 Automatic connection retry mechanism (3 attempts with exponential backoff)
+- 💚 Health monitoring system (checks every 30 seconds)
+- 📢 Improved error notifications with clear restart instructions
+- 🛡️ Better handling of service disconnections and crashes
 
 For original NeuTTS Air issues: https://github.com/neuphonic/neutts-air/issues
